@@ -54,6 +54,7 @@ struct PathMapView: View {
     // Holds all photos at a tapped coordinate
     @State private var selectedPhotos: [PathPhoto]? = nil
     @State private var selectedPhotoIndex: Int = 0
+    @State private var showPhotoGrid: Bool = false
     @State private var pickedPathPhotos: [PathPhoto] = []
     @State private var showAssociationAlert = false
     @State private var associatedCount = 0
@@ -89,7 +90,15 @@ struct PathMapView: View {
         .navigationTitle(currentPath.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
+            ToolbarItemGroup(placement: .navigationBarTrailing) {
+                NavigationLink(destination: PhotoGridView(photos: currentPath.photos), isActive: $showPhotoGrid) {
+                    EmptyView()
+                }
+                Button(action: {
+                    showPhotoGrid = true
+                }) {
+                    Image(systemName: "photo.on.rectangle")
+                }
                 Button(action: {
                     showEditingSheet = true
                 }) {
@@ -97,6 +106,7 @@ struct PathMapView: View {
                 }
             }
         }
+        // Removed sheet for all photos; now uses navigation to PhotoGridView
         .onAppear {
             if showRenameSheetOnAppear {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
