@@ -3,9 +3,15 @@ import Photos
 import CoreLocation
 
 struct PhotoGridView: View {
-    let photos: [PathPhoto]
+    @State private var photos: [PathPhoto]
     @ObservedObject var pathStorage: PathStorage
     let pathId: UUID
+    
+    init(photos: [PathPhoto], pathStorage: PathStorage, pathId: UUID) {
+        self._photos = State(initialValue: photos)
+        self.pathStorage = pathStorage
+        self.pathId = pathId
+    }
     let columns = [
         GridItem(.flexible()),
         GridItem(.flexible()),
@@ -29,6 +35,16 @@ struct PhotoGridView: View {
                                 pathStorage: pathStorage,
                                 pathId: pathId
                             )
+                            .onDisappear {
+                                // Update photos when returning from pager
+                                if let updatedPath = pathStorage.path(for: pathId) {
+                                    photos = updatedPath.photos
+                                }
+                                // Dismiss if no photos left
+                                if photos.isEmpty {
+                                    dismiss()
+                                }
+                            }
                         ) {
                             Image(uiImage: image)
                                 .resizable()

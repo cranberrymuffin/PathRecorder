@@ -37,12 +37,6 @@ struct RecordedPath: Identifiable, Codable, Hashable {
         self.name = newName
     }
     
-    mutating func deletePhoto(_ photo: PathPhoto) {
-        photos.removeAll { $0.id == photo.id }
-        // Also delete the image file from disk
-        let url = PathPhoto.imagesDirectory.appendingPathComponent(photo.imageFilename)
-        try? FileManager.default.removeItem(at: url)
-    }
 }
 
 struct GPSLocation: Identifiable, Codable, Equatable {
@@ -90,6 +84,16 @@ class PathStorage: ObservableObject {
     func updatePath(_ path: RecordedPath) {
         if let index = recordedPaths.firstIndex(where: { $0.id == path.id }) {
             recordedPaths[index] = path
+            saveToUserDefaults()
+        }
+    }
+    
+    func deletePhoto(from pathId: UUID, photo: PathPhoto) {
+        if let index = recordedPaths.firstIndex(where: { $0.id == pathId }) {
+            recordedPaths[index].photos.removeAll { $0.id == photo.id }
+            // Delete image file from disk
+            let url = PathPhoto.imagesDirectory.appendingPathComponent(photo.imageFilename)
+            try? FileManager.default.removeItem(at: url)
             saveToUserDefaults()
         }
     }

@@ -110,15 +110,11 @@ struct PhotoPagerView: View {
     }
     
     private func deletePhoto(_ photo: PathPhoto) {
-        // Get the current path from storage
-        if var currentPath = pathStorage.path(for: pathId) {
-            // Remove photo from the path
-            currentPath.deletePhoto(photo)
-            // Remove photo from local photos array
-            photos.removeAll { $0.id == photo.id }
-            // Update the stored path
-            pathStorage.updatePath(currentPath)
-        }
+        // Use PathStorage's deletePhoto method
+        pathStorage.deletePhoto(from: pathId, photo: photo)
+        
+        // Remove photo from local photos array
+        photos.removeAll { $0.id == photo.id }
         
         // Only dismiss if no photos are left
         if photos.isEmpty {
