@@ -91,13 +91,15 @@ struct PathMapView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItemGroup(placement: .navigationBarTrailing) {
-                NavigationLink(destination: PhotoGridView(photos: currentPath.photos, pathStorage: pathStorage, pathId: recordedPath.id), isActive: $showPhotoGrid) {
-                    EmptyView()
-                }
-                Button(action: {
-                    showPhotoGrid = true
-                }) {
-                    Image(systemName: "photo.on.rectangle")
+                if !currentPath.photos.isEmpty {
+                    NavigationLink(destination: PhotoGridView(photos: currentPath.photos, pathStorage: pathStorage, pathId: recordedPath.id), isActive: $showPhotoGrid) {
+                        EmptyView()
+                    }
+                    Button(action: {
+                        showPhotoGrid = true
+                    }) {
+                        Image(systemName: "photo.on.rectangle")
+                    }
                 }
                 Button(action: {
                     showEditingSheet = true
