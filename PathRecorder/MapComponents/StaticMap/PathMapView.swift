@@ -91,7 +91,7 @@ struct PathMapView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItemGroup(placement: .navigationBarTrailing) {
-                NavigationLink(destination: PhotoGridView(photos: currentPath.photos), isActive: $showPhotoGrid) {
+                NavigationLink(destination: PhotoGridView(photos: currentPath.photos, pathStorage: pathStorage, pathId: recordedPath.id), isActive: $showPhotoGrid) {
                     EmptyView()
                 }
                 Button(action: {
@@ -106,6 +106,30 @@ struct PathMapView: View {
                 }
             }
         }
+        // Hidden NavigationLink for photo pager
+        .background(
+            NavigationLink(
+                destination: Group {
+                    if let photos = selectedPhotos {
+                        PhotoPagerView(
+                            photos: photos,
+                            selectedIndex: $selectedPhotoIndex,
+                            pathStorage: pathStorage,
+                            pathId: recordedPath.id
+                        )
+                    } else {
+                        Text("No photos at this location.")
+                            .padding()
+                    }
+                },
+                isActive: Binding(
+                    get: { selectedPhotos != nil },
+                    set: { if !$0 { selectedPhotos = nil } }
+                )
+            ) {
+                EmptyView()
+            }
+        )
         // Removed sheet for all photos; now uses navigation to PhotoGridView
         .onAppear {
             if showRenameSheetOnAppear {
@@ -159,22 +183,6 @@ struct PathMapView: View {
                     editedName = latest.name
                     recordedPath = latest
                 }
-            }
-        }
-        .sheet(isPresented: Binding(
-            get: { selectedPhotos != nil },
-            set: { if !$0 { selectedPhotos = nil } }
-        )) {
-            if let photos = selectedPhotos {
-                PhotoPagerView(
-                    photos: photos, 
-                    selectedIndex: $selectedPhotoIndex,
-                    pathStorage: pathStorage,
-                    pathId: recordedPath.id
-                )
-            } else {
-                Text("No photos at this location.")
-                    .padding()
             }
         }
         .sheet(isPresented: Binding(get: { !showEditingSheet && showAssociationAlert && associatedCount > 0 }, set: { show in showAssociationAlert = show })) {
