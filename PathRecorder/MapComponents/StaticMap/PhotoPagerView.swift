@@ -2,13 +2,15 @@ import SwiftUI
 import Photos
 
 struct PhotoPagerView: View {
+    @Environment(\.dismiss) private var dismiss
     let photos: [PathPhoto] // Replace with your actual model type
     @Binding var selectedIndex: Int
     @State private var showShareSheet = false
     @State private var imageToShare: ShareImage?
     @State private var showDeleteAlert = false
     @State private var showPhotoLibraryAlert = false
-    let onDeletePhoto: (PathPhoto) -> Void
+    @ObservedObject var pathStorage: PathStorage
+    let pathId: UUID
 
     var body: some View {
         Group {
@@ -96,7 +98,7 @@ struct PhotoPagerView: View {
             Button("Delete", role: .destructive) {
                 if selectedIndex < photos.count {
                     let photoToDelete = photos[selectedIndex]
-                    onDeletePhoto(photoToDelete)
+                    deletePhoto(photoToDelete)
                 }
             }
             Button("Cancel", role: .cancel) { }
@@ -123,6 +125,20 @@ struct PhotoPagerView: View {
             Button("Cancel", role: .cancel) { }
         } message: {
             Text("To save photos, please allow full access to your photo library in Settings.")
+        }
+    }
+    
+    private func deletePhoto(_ photo: PathPhoto) {
+        // Get the current path from storage
+        if var currentPath = pathStorage.path(for: pathId) {
+            // Remove photo from the path
+            currentPath.deletePhoto(photo)
+            
+            // Update the stored path
+            pathStorage.updatePath(currentPath)
+            
+            // Close the photo pager sheet
+            dismiss()
         }
     }
     

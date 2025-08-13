@@ -169,32 +169,8 @@ struct PathMapView: View {
                 PhotoPagerView(
                     photos: photos, 
                     selectedIndex: $selectedPhotoIndex,
-                    onDeletePhoto: { photoToDelete in
-                        // Get the current path from storage
-                        if var currentPath = pathStorage.path(for: recordedPath.id) {
-                            // Remove photo from the path
-                            currentPath.deletePhoto(photoToDelete)
-                            
-                            // Update the stored path
-                            pathStorage.updatePath(currentPath)
-                            
-                            // Update the local recordedPath state as well
-                            recordedPath = currentPath
-                            
-                            // Update the selected photos list with the latest data
-                            selectedPhotos?.removeAll { $0.id == photoToDelete.id }
-                            
-                            // If no photos left, close the sheet
-                            if selectedPhotos?.isEmpty == true {
-                                selectedPhotos = nil
-                            } else if let remainingPhotos = selectedPhotos {
-                                // Adjust selected index if needed
-                                if selectedPhotoIndex >= remainingPhotos.count {
-                                    selectedPhotoIndex = max(0, remainingPhotos.count - 1)
-                                }
-                            }
-                        }
-                    }
+                    pathStorage: pathStorage,
+                    pathId: recordedPath.id
                 )
             } else {
                 Text("No photos at this location.")
