@@ -22,7 +22,8 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     @Published var currentActivity: Activity<PathRecorderAttributes>?
     @Published var editingPathId: UUID? = nil
     @Published var editingPathName: String? = nil
-    @Published var pathNeedingRename: RecordedPath? = nil // Track path needing rename
+    @Published var pathToNavigateTo: RecordedPath? = nil // Track path to navigate to after recording
+    @Published var shouldShowRenameSheet = false // Control whether rename sheet appears
     
     // Properties for improved distance calculation
     private var lastProcessedTime: Date?
@@ -464,11 +465,10 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         pathStorage.savePath(recordedPath)
         capturedPhotos.removeAll()
 
-        // If name is nil, trigger UI to show rename sheet for this path
-        if editingPathName == nil {
-            DispatchQueue.main.async {
-                self.pathNeedingRename = recordedPath
-            }
+        // Always navigate to the path, but only show rename sheet if name is nil
+        DispatchQueue.main.async {
+            self.pathToNavigateTo = recordedPath
+            self.shouldShowRenameSheet = (self.editingPathName == nil)
         }
     }
     

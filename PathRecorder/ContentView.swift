@@ -89,11 +89,11 @@ struct ContentView: View {
                     showRecordingSheet = true
                 }
             }
-            .onReceive(locationManager.$pathNeedingRename) { path in
+            .onReceive(locationManager.$pathToNavigateTo) { path in
                 if let path = path {
                     selectedPathForRename = path
                     navigationPath.append(path)
-                    showRenameSheet = true
+                    showRenameSheet = locationManager.shouldShowRenameSheet
                 }
             }
             .fullScreenCover(isPresented: Binding(
