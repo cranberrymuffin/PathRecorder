@@ -11,6 +11,19 @@ import CoreLocation
 import Shared // Import the module if needed
 
 struct ContentView: View {
+    // Computed property for sort order label
+    var sortOrderLabel: String {
+        switch selectedSortField {
+        case .date:
+            return sortAscending ? "Least recent" : "Most recent"
+        case .time:
+            return sortAscending ? "Shortest first" : "Longest first"
+        case .distance:
+            return sortAscending ? "Shortest first" : "Longest first"
+        case .pace:
+            return sortAscending ? "Fastest first" : "Slowest first"
+        }
+    }
     @StateObject private var locationManager = LocationManager()
     @StateObject private var pathStorage = PathStorage()
     @StateObject private var settings = Settings()
@@ -21,17 +34,51 @@ struct ContentView: View {
     @State private var showLocationAlert = false
     @State private var showSettingsSheet = false
 
+    enum SortField: String, CaseIterable, Identifiable {
+        case date = "Date"
+        case pace = "Pace"
+        case time = "Time"
+        case distance = "Distance"
+        var id: String { rawValue }
+    }
+    @State private var selectedSortField: SortField = .date
+    @State private var sortAscending: Bool = false
+
     var body: some View {
         NavigationStack(path: $navigationPath) {
-            VStack(spacing: 20) {
+            VStack(spacing: 10) {
                 Text("No history yet — start recording to track your journeys.")
                     .font(.headline)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: .infinity, maxHeight: pathStorage.recordedPaths.isEmpty ? .infinity : 0, alignment: .center)
                     .opacity(pathStorage.recordedPaths.isEmpty ? 1 : 0)
+
+                if pathStorage.recordedPaths.count > 1 {
+                    HStack {
+                        Menu {
+                            Picker("Sort by", selection: $selectedSortField) {
+                                ForEach(SortField.allCases) { field in
+                                    Text(field.rawValue).tag(field)
+                                }
+                            }
+                        } label: {
+                            Text("Sort by \(selectedSortField.rawValue)")
+                        }
+                        .font(.subheadline)
+                        Spacer()
+                        Button(action: {
+                            sortAscending.toggle()
+                        }) {
+                            Text(sortOrderLabel)
+                        }
+                        .font(.subheadline)
+                    }
+                    .padding(.horizontal)
+                }
+
                 List {
-                    ForEach(pathStorage.recordedPaths.sorted(by: { $0.startTime > $1.startTime })) { path in
+                    ForEach(sortedPaths) { path in
                         RecordedPathRow(
                             path: path,
                             onEdit: {
@@ -51,7 +98,7 @@ struct ContentView: View {
                     }
                 }
                 .listStyle(.plain)
-                
+
                 Button(action: {
                     if locationManager.authorizationStatus == .authorizedAlways || locationManager.authorizationStatus == .authorizedWhenInUse {
                         locationManager.startRecording()
@@ -127,7 +174,7 @@ struct ContentView: View {
                 SettingsView(settings: settings)
             }
             .navigationDestination(for: RecordedPath.self) { path in
-                let view = PathMapView(
+                PathMapView(
                     recordedPath: path, 
                     locationManager: locationManager, 
                     pathStorage: pathStorage, 
@@ -136,10 +183,37 @@ struct ContentView: View {
                         showRecordingSheet = true
                     }
                 )
-                showRenameSheet = false
-                return view
+                .onAppear {
+                    showRenameSheet = false
+                }
             }
         }
+    }
+
+    // Computed property for sorted paths
+    var sortedPaths: [RecordedPath] {
+        let paths = pathStorage.recordedPaths
+        switch selectedSortField {
+        case .date:
+            return paths.sorted { sortAscending ? $0.startTime < $1.startTime : $0.startTime > $1.startTime }
+        case .pace:
+            // Lower pace = faster, so ascending = fastest first
+            return paths.sorted {
+                let pace0 = computePaceValue(distanceMeters: $0.totalDistance, elapsedSeconds: $0.totalDuration)
+                let pace1 = computePaceValue(distanceMeters: $1.totalDistance, elapsedSeconds: $1.totalDuration)
+                return sortAscending ? pace0 < pace1 : pace0 > pace1
+            }
+        case .time:
+            return paths.sorted { sortAscending ? $0.totalDuration < $1.totalDuration : $0.totalDuration > $1.totalDuration }
+        case .distance:
+            return paths.sorted { sortAscending ? $0.totalDistance < $1.totalDistance : $0.totalDistance > $1.totalDistance }
+        }
+    }
+
+    // Helper to get pace as seconds per meter (or per km/mi, but for sorting, use SI)
+    func computePaceValue(distanceMeters: Double, elapsedSeconds: Double) -> Double {
+        guard distanceMeters > 0 else { return Double.greatestFiniteMagnitude }
+        return elapsedSeconds / distanceMeters
     }
 
     private func formatTime(_ timeInterval: TimeInterval) -> String {

@@ -8,7 +8,6 @@ struct LivePathMapView: View {
     @ObservedObject var pathStorage: PathStorage
     @State private var region: MKCoordinateRegion?
     @State private var isAutoCentering: Bool = true
-    @State private var lastCenterLocation: CLLocationCoordinate2D?
     @State private var showCamera = false
     @State private var capturedImage: UIImage?
     @State private var hasCurrentGPS: Bool = false // Track if we have current GPS
