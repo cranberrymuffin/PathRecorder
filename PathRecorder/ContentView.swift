@@ -9,8 +9,10 @@ import SwiftUI
 import SwiftData
 import CoreLocation
 import Shared // Import the module if needed
+import StoreKit
 
 struct ContentView: View {
+    private let rateAlertKey = "PathRecorder.HasShownRateAlert"
     // Computed property for sort order label
     var sortOrderLabel: String {
         switch selectedSortField {
@@ -134,6 +136,14 @@ struct ContentView: View {
                 // Automatically show recording view if in-progress recording exists
                 if locationManager.isRecording && locationManager.isPaused {
                     showRecordingSheet = true
+                }
+                // Show StoreKit review prompt if more than 3 recordings and not shown before
+                let hasShownRateAlert = UserDefaults.standard.bool(forKey: rateAlertKey)
+                if pathStorage.recordedPaths.count >= 3 && !hasShownRateAlert {
+                    if let windowScene = UIApplication.shared.connectedScenes.first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene {
+                        AppStore.requestReview(in: windowScene)
+                    }
+                    UserDefaults.standard.set(true, forKey: rateAlertKey)
                 }
             }
             .onReceive(locationManager.$pathToNavigateTo) { path in
