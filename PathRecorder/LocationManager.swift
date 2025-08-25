@@ -23,7 +23,6 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     @Published var editingPathId: UUID? = nil
     @Published var editingPathName: String? = nil
     @Published var pathToNavigateTo: RecordedPath? = nil // Track path to navigate to after recording
-    @Published var shouldShowRenameSheet = false // Control whether rename sheet appears
     
     // Properties for improved distance calculation
     private var lastProcessedTime: Date?
@@ -138,6 +137,8 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         currentSegmentId = UUID() // Start a new segment
         isRecording = true
         isPaused = false
+        self.editingPathId = nil
+        self.editingPathName = nil
         locationManager.startUpdatingLocation()
         self.markSegment() // Ensure segment starts with a coordinate
         startLiveActivity()
@@ -156,8 +157,6 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
             self.stopActivityTimer()
             self.endLiveActivity()
             self.saveCurrentPath(to: pathStorage)
-            self.editingPathId = nil
-            self.editingPathName = nil
             UserDefaults.standard.removeObject(forKey: self.recordingStateKey) // Clear saved state
         }
     }
@@ -468,7 +467,6 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         // Always navigate to the path, but only show rename sheet if name is nil
         DispatchQueue.main.async {
             self.pathToNavigateTo = recordedPath
-            self.shouldShowRenameSheet = (self.editingPathName == nil)
         }
     }
     

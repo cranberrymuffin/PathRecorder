@@ -150,7 +150,7 @@ struct ContentView: View {
                 if let path = path {
                     selectedPathForRename = path
                     navigationPath.append(path)
-                    showRenameSheet = locationManager.shouldShowRenameSheet
+                    showRenameSheet = locationManager.editingPathName == nil
                 }
             }
             .fullScreenCover(isPresented: Binding(
