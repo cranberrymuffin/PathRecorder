@@ -1,5 +1,6 @@
 import SwiftUI
 import MapKit
+import Shared
 
 /// Displays a map with polylines and GPS point annotations for a recorded path.
 struct PathMapView: View {
@@ -7,6 +8,7 @@ struct PathMapView: View {
     @State private var sheetDetent: PresentationDetent = .fraction(0.25)
     @ObservedObject var locationManager: LocationManager
     @ObservedObject var pathStorage: PathStorage
+    @ObservedObject var settings: Settings
     @State private var region: MKCoordinateRegion
     @State private var pathSegments: [PathSegment] = []
     @State private var showEditingSheet = false
@@ -14,10 +16,12 @@ struct PathMapView: View {
     @State private var recordedPath: RecordedPath
     var showRenameSheetOnAppear: Bool
     var onModifyPath: (() -> Void)?
+    @State private var bottomSheetDetent: PresentationDetent = .height(100)
 
-    init(recordedPath: RecordedPath, locationManager: LocationManager, pathStorage: PathStorage, showRenameSheetOnAppear: Bool = false, onModifyPath: (() -> Void)? = nil) {
+    init(recordedPath: RecordedPath, locationManager: LocationManager, pathStorage: PathStorage, settings: Settings, showRenameSheetOnAppear: Bool = false, onModifyPath: (() -> Void)? = nil) {
         self.locationManager = locationManager
         self.pathStorage = pathStorage
+        self.settings = settings
         _recordedPath = State(initialValue: recordedPath)
         // Group locations by segment first
         let segments = Dictionary(grouping: recordedPath.locations, by: { $0.segmentId })
@@ -60,34 +64,117 @@ struct PathMapView: View {
     @State private var associatedCount = 0
     @State private var pendingPhotos: [PathPhoto] = []
 
-    var body: some View {
-        let currentPath = pathStorage.path(for: recordedPath.id) ?? recordedPath
+    // MARK: - View Components
+    private func mapView(for currentPath: RecordedPath) -> some View {
         MapWithPolylines(
             region: region,
             locations: currentPath.locations,
             pathSegments: pathSegments,
             photos: currentPath.photos,
             onPhotoTapped: { tappedPhoto in
-                // Always get the most current path data when a photo is tapped
-                let latestPath = pathStorage.path(for: recordedPath.id) ?? recordedPath
-                
-                // Find all photos within 10 meters of the tapped coordinate
-                let tappedLocation = CLLocation(latitude: tappedPhoto.coordinate.latitude, longitude: tappedPhoto.coordinate.longitude)
-                let nearbyPhotos = latestPath.photos.filter {
-                    let photoLocation = CLLocation(latitude: $0.coordinate.latitude, longitude: $0.coordinate.longitude)
-                    return tappedLocation.distance(from: photoLocation) <= 10.0 // meters
-                }
-                selectedPhotos = nearbyPhotos
-                // Show the tapped photo first if multiple (only if it still exists)
-                if let idx = nearbyPhotos.firstIndex(where: { $0.id == tappedPhoto.id }) {
-                    selectedPhotoIndex = idx
-                } else {
-                    selectedPhotoIndex = 0
-                }
+                handlePhotoTap(tappedPhoto)
             }
         )
-        .id(currentPath.photos.count) // Force refresh when photo count changes
-        .navigationTitle(currentPath.name)
+        .id(currentPath.photos.count)
+    }
+    
+    private func bottomInfoSheet(for currentPath: RecordedPath) -> some View {
+        VStack(spacing: 0) {
+            Spacer()
+            pathInfoContent(for: currentPath)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(.ultraThinMaterial)
+                        .shadow(radius: 8)
+                )
+                .padding(.horizontal, 12)
+                .padding(.bottom, 20)
+        }
+    }
+    
+    private func pathInfoContent(for currentPath: RecordedPath) -> some View {
+        VStack(alignment: .center, spacing: 8) {
+            // Title line
+            Text(currentPath.name)
+                .font(.headline)
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
+            
+            // Metrics line
+            pathMetricsRow(for: currentPath)
+                .padding(.horizontal, 16)
+                .padding(.bottom, 16)
+        }
+        .frame(maxWidth: nil, alignment: .center)
+    }
+    
+    private func pathMetricsRow(for currentPath: RecordedPath) -> some View {
+        HStack(spacing: 12) {
+            // Distance
+            metricItem(
+                icon: "figure.walk",
+                color: .green,
+                text: settings.formatDistance(currentPath.totalDistance)
+            )
+            
+            
+            // Total time
+            metricItem(
+                icon: "clock",
+                color: .orange,
+                text: formatTime(currentPath.totalDuration)
+            )
+            
+            
+            // Pace
+            metricItem(
+                icon: "timer",
+                color: .purple,
+                text: computePace(
+                    distanceMeters: currentPath.totalDistance,
+                    elapsedSeconds: currentPath.totalDuration,
+                    unit: settings.distanceUnit.rawValue
+                )
+            )
+        }
+    }
+    
+    private func metricItem(icon: String, color: Color, text: String) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon)
+                .foregroundColor(color)
+                .font(.caption)
+            Text(text)
+                .font(.subheadline)
+        }
+    }
+    
+    // MARK: - Helper Methods
+    private func handlePhotoTap(_ tappedPhoto: PathPhoto) {
+        // Always get the most current path data when a photo is tapped
+        let latestPath = pathStorage.path(for: recordedPath.id) ?? recordedPath
+        
+        // Find all photos within 10 meters of the tapped coordinate
+        let tappedLocation = CLLocation(latitude: tappedPhoto.coordinate.latitude, longitude: tappedPhoto.coordinate.longitude)
+        let nearbyPhotos = latestPath.photos.filter {
+            let photoLocation = CLLocation(latitude: $0.coordinate.latitude, longitude: $0.coordinate.longitude)
+            return tappedLocation.distance(from: photoLocation) <= 10.0 // meters
+        }
+        selectedPhotos = nearbyPhotos
+        // Show the tapped photo first if multiple (only if it still exists)
+        if let idx = nearbyPhotos.firstIndex(where: { $0.id == tappedPhoto.id }) {
+            selectedPhotoIndex = idx
+        } else {
+            selectedPhotoIndex = 0
+        }
+    }
+
+    var body: some View {
+        let currentPath = pathStorage.path(for: recordedPath.id) ?? recordedPath
+        ZStack(alignment: .bottom) {
+            mapView(for: currentPath)
+            bottomInfoSheet(for: currentPath)
+        }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItemGroup(placement: .navigationBarTrailing) {
@@ -213,5 +300,13 @@ struct PathMapView: View {
                 pendingPhotos.removeAll()
             }
         }
+    }
+    
+    // Helper function for formatting time
+    private func formatTime(_ timeInterval: TimeInterval) -> String {
+        let hours = Int(timeInterval) / 3600
+        let minutes = Int(timeInterval) / 60 % 60
+        let seconds = Int(timeInterval) % 60
+        return String(format: "%02d:%02d:%02d", hours, minutes, seconds)
     }
 }

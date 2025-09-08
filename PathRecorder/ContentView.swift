@@ -188,6 +188,7 @@ struct ContentView: View {
                     recordedPath: path, 
                     locationManager: locationManager, 
                     pathStorage: pathStorage, 
+                    settings: settings,
                     showRenameSheetOnAppear: showRenameSheet,
                     onModifyPath: {
                         showRecordingSheet = true
