@@ -77,7 +77,7 @@ struct LivePathMapView: View {
                     Spacer()
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle())
-                        .scaleEffect(1.5)
+                        .scaleEffect(1.6)
                     Text("Waiting for GPS...")
                         .font(.headline)
                         .padding(.top, 8)

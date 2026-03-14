@@ -12,6 +12,11 @@
 		B93D3C352E07111700B158C8 /* PathRecorderWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = B93D3C1F2E07111600B158C8 /* PathRecorderWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		B93D3C422E07157000B158C8 /* Shared in Frameworks */ = {isa = PBXBuildFile; productRef = B93D3C412E07157000B158C8 /* Shared */; };
 		B93D3C442E07158300B158C8 /* Shared in Frameworks */ = {isa = PBXBuildFile; productRef = B93D3C432E07158300B158C8 /* Shared */; };
+		B9AD176E2F65C4AF00DB89CE /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = B9AD176D2F65C4AF00DB89CE /* Auth */; };
+		B9AD17702F65C4AF00DB89CE /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = B9AD176F2F65C4AF00DB89CE /* Functions */; };
+		B9AD17722F65C4AF00DB89CE /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = B9AD17712F65C4AF00DB89CE /* PostgREST */; };
+		B9AD17742F65C4AF00DB89CE /* Realtime in Frameworks */ = {isa = PBXBuildFile; productRef = B9AD17732F65C4AF00DB89CE /* Realtime */; };
+		B9AD17762F65C4AF00DB89CE /* Storage in Frameworks */ = {isa = PBXBuildFile; productRef = B9AD17752F65C4AF00DB89CE /* Storage */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -73,16 +78,28 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
+				Supabase.swift,
 			);
 			target = 6141C8D22DECACB90034946C /* PathRecorder */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
+		B9AD17792F65C51F00DB89CE /* Exceptions for "PathRecorder" folder in "Copy Bundle Resources" phase from "PathRecorder" target */ = {
+			isa = PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet;
+			buildPhase = 6141C8D12DECACB90034946C /* Resources */;
+			membershipExceptions = (
+				Supabase.swift,
+			);
+		};
+/* End PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		6141C8D52DECACB90034946C /* PathRecorder */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				B9AAE7DD2E34815900CD6869 /* Exceptions for "PathRecorder" folder in "PathRecorder" target */,
+				B9AD17792F65C51F00DB89CE /* Exceptions for "PathRecorder" folder in "Copy Bundle Resources" phase from "PathRecorder" target */,
 			);
 			path = PathRecorder;
 			sourceTree = "<group>";
@@ -112,6 +129,11 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B9AD17762F65C4AF00DB89CE /* Storage in Frameworks */,
+				B9AD17722F65C4AF00DB89CE /* PostgREST in Frameworks */,
+				B9AD17702F65C4AF00DB89CE /* Functions in Frameworks */,
+				B9AD176E2F65C4AF00DB89CE /* Auth in Frameworks */,
+				B9AD17742F65C4AF00DB89CE /* Realtime in Frameworks */,
 				B93D3C422E07157000B158C8 /* Shared in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -198,6 +220,11 @@
 			name = PathRecorder;
 			packageProductDependencies = (
 				B93D3C412E07157000B158C8 /* Shared */,
+				B9AD176D2F65C4AF00DB89CE /* Auth */,
+				B9AD176F2F65C4AF00DB89CE /* Functions */,
+				B9AD17712F65C4AF00DB89CE /* PostgREST */,
+				B9AD17732F65C4AF00DB89CE /* Realtime */,
+				B9AD17752F65C4AF00DB89CE /* Storage */,
 			);
 			productName = PathRecorder;
 			productReference = 6141C8D32DECACB90034946C /* PathRecorder.app */;
@@ -309,6 +336,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				B93D3C402E07152A00B158C8 /* XCLocalSwiftPackageReference "Shared" */,
+				B9AD176C2F65C4AF00DB89CE /* XCRemoteSwiftPackageReference "supabase-swift" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 6141C8D42DECACB90034946C /* Products */;
@@ -551,7 +579,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.5;
+				MARKETING_VERSION = 1.6;
 				PRODUCT_BUNDLE_IDENTIFIER = slugmuffin.PathRecorder;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -588,7 +616,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.5;
+				MARKETING_VERSION = 1.6;
 				PRODUCT_BUNDLE_IDENTIFIER = slugmuffin.PathRecorder;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -687,7 +715,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.5;
+				MARKETING_VERSION = 1.6;
 				PRODUCT_BUNDLE_IDENTIFIER = slugmuffin.PathRecorder.PathRecorderWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -715,7 +743,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.5;
+				MARKETING_VERSION = 1.6;
 				PRODUCT_BUNDLE_IDENTIFIER = slugmuffin.PathRecorder.PathRecorderWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -782,6 +810,17 @@
 		};
 /* End XCLocalSwiftPackageReference section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+		B9AD176C2F65C4AF00DB89CE /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.5.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
 		B93D3C412E07157000B158C8 /* Shared */ = {
 			isa = XCSwiftPackageProductDependency;
@@ -790,6 +829,31 @@
 		B93D3C432E07158300B158C8 /* Shared */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = Shared;
+		};
+		B9AD176D2F65C4AF00DB89CE /* Auth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B9AD176C2F65C4AF00DB89CE /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Auth;
+		};
+		B9AD176F2F65C4AF00DB89CE /* Functions */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B9AD176C2F65C4AF00DB89CE /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Functions;
+		};
+		B9AD17712F65C4AF00DB89CE /* PostgREST */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B9AD176C2F65C4AF00DB89CE /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = PostgREST;
+		};
+		B9AD17732F65C4AF00DB89CE /* Realtime */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B9AD176C2F65C4AF00DB89CE /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Realtime;
+		};
+		B9AD17752F65C4AF00DB89CE /* Storage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B9AD176C2F65C4AF00DB89CE /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Storage;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
