@@ -35,6 +35,7 @@ struct PathRecorderApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environmentObject(authManager)
         }
         .modelContainer(sharedModelContainer)
     }

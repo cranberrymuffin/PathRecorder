@@ -63,9 +63,19 @@ class Settings: ObservableObject {
 struct SettingsView: View {
     @ObservedObject var settings: Settings
     @ObservedObject var pathStorage: PathStorage
+    @EnvironmentObject private var authManager: AuthManager
     @Environment(\.dismiss) private var dismiss
     @State private var exportURL: URL? = nil
     @State private var showingShare = false
+    // Sign-out
+    @State private var isSigningOut = false
+    // Inline sign-in OTP flow
+    @State private var authPhone = ""
+    @State private var authOTP = ""
+    @State private var didRequestOTP = false
+    @State private var isSendingOTP = false
+    @State private var isVerifyingOTP = false
+    @State private var authErrorMessage: String? = nil
 
     var body: some View {
         NavigationView {
@@ -91,6 +101,57 @@ struct SettingsView: View {
                         }
                     }
                 }
+                Section(header: Text("Account")) {
+                    if authManager.isAuthenticated {
+                        HStack {
+                            Text("Phone")
+                            Spacer()
+                            Text(authManager.displayPhone(for: authManager.currentUser))
+                                .foregroundColor(.secondary)
+                        }
+                        Button(role: .destructive) {
+                            Task { await signOut() }
+                        } label: {
+                            if isSigningOut {
+                                HStack { ProgressView(); Text("Signing out...") }
+                            } else {
+                                Text("Sign Out")
+                            }
+                        }
+                        .disabled(isSigningOut)
+                    } else {
+                        TextField("+15551234567", text: $authPhone)
+                            .keyboardType(.phonePad)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled(true)
+
+                        Button(isSendingOTP ? "Sending..." : "Send Code") {
+                            Task { await sendOTP() }
+                        }
+                        .disabled(isSendingOTP || authPhone.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+                        if didRequestOTP {
+                            TextField("6-digit code", text: $authOTP)
+                                .keyboardType(.numberPad)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled(true)
+
+                            Button(isVerifyingOTP ? "Verifying..." : "Verify Code") {
+                                Task { await verifyOTP() }
+                            }
+                            .disabled(isVerifyingOTP || authOTP.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+                            Button("Resend Code") {
+                                Task { await sendOTP() }
+                            }
+                            .disabled(isSendingOTP)
+                        }
+
+                        Text("Enter your phone number to sign in or create an account.")
+                            .font(.footnote)
+                            .foregroundColor(.secondary)
+                    }
+                }
             }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
@@ -108,6 +169,48 @@ struct SettingsView: View {
             } else {
                 EmptyView()
             }
+        }
+        .alert("Auth Error", isPresented: .constant(authErrorMessage != nil)) {
+            Button("OK") {
+                authErrorMessage = nil
+            }
+        } message: {
+            Text(authErrorMessage ?? "Unknown error")
+        }
+    }
+
+    private func signOut() async {
+        isSigningOut = true
+        defer { isSigningOut = false }
+        do {
+            try await authManager.signOut()
+        } catch {
+            authErrorMessage = error.localizedDescription
+        }
+    }
+
+    private func sendOTP() async {
+        isSendingOTP = true
+        authErrorMessage = nil
+        defer { isSendingOTP = false }
+        do {
+            try await authManager.requestOTP(phone: authPhone)
+            didRequestOTP = true
+        } catch {
+            authErrorMessage = error.localizedDescription
+        }
+    }
+
+    private func verifyOTP() async {
+        isVerifyingOTP = true
+        authErrorMessage = nil
+        defer { isVerifyingOTP = false }
+        do {
+            try await authManager.verifyOTP(phone: authPhone, token: authOTP)
+            authOTP = ""
+            didRequestOTP = false
+        } catch {
+            authErrorMessage = error.localizedDescription
         }
     }
 

@@ -17,6 +17,7 @@
 		B9AD17722F65C4AF00DB89CE /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = B9AD17712F65C4AF00DB89CE /* PostgREST */; };
 		B9AD17742F65C4AF00DB89CE /* Realtime in Frameworks */ = {isa = PBXBuildFile; productRef = B9AD17732F65C4AF00DB89CE /* Realtime */; };
 		B9AD17762F65C4AF00DB89CE /* Storage in Frameworks */ = {isa = PBXBuildFile; productRef = B9AD17752F65C4AF00DB89CE /* Storage */; };
+		B9AD18862F65D8AE00DB89CE /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = B9AD18852F65D8AE00DB89CE /* Supabase */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -78,7 +79,6 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
-				Supabase.swift,
 			);
 			target = 6141C8D22DECACB90034946C /* PathRecorder */;
 		};
@@ -129,6 +129,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B9AD18862F65D8AE00DB89CE /* Supabase in Frameworks */,
 				B9AD17762F65C4AF00DB89CE /* Storage in Frameworks */,
 				B9AD17722F65C4AF00DB89CE /* PostgREST in Frameworks */,
 				B9AD17702F65C4AF00DB89CE /* Functions in Frameworks */,
@@ -225,6 +226,7 @@
 				B9AD17712F65C4AF00DB89CE /* PostgREST */,
 				B9AD17732F65C4AF00DB89CE /* Realtime */,
 				B9AD17752F65C4AF00DB89CE /* Storage */,
+				B9AD18852F65D8AE00DB89CE /* Supabase */,
 			);
 			productName = PathRecorder;
 			productReference = 6141C8D32DECACB90034946C /* PathRecorder.app */;
@@ -854,6 +856,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = B9AD176C2F65C4AF00DB89CE /* XCRemoteSwiftPackageReference "supabase-swift" */;
 			productName = Storage;
+		};
+		B9AD18852F65D8AE00DB89CE /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B9AD176C2F65C4AF00DB89CE /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
