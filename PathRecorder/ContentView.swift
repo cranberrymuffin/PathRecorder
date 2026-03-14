@@ -181,7 +181,7 @@ struct ContentView: View {
                 }
             }
             .sheet(isPresented: $showSettingsSheet) {
-                SettingsView(settings: settings)
+                SettingsView(settings: settings, pathStorage: pathStorage)
             }
             .navigationDestination(for: RecordedPath.self) { path in
                 PathMapView(

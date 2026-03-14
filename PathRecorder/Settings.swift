@@ -1,10 +1,11 @@
 import Foundation
 import SwiftUI
+import UIKit
 
 enum DistanceUnit: String, CaseIterable, Codable {
     case kilometers = "km"
     case miles = "mi"
-    
+
     var displayName: String {
         switch self {
         case .kilometers:
@@ -13,7 +14,7 @@ enum DistanceUnit: String, CaseIterable, Codable {
             return "Miles"
         }
     }
-    
+
     var conversionFactor: Double {
         switch self {
         case .kilometers:
@@ -22,7 +23,7 @@ enum DistanceUnit: String, CaseIterable, Codable {
             return 0.621371 // Convert from meters to miles
         }
     }
-    
+
     var unitLabel: String {
         switch self {
         case .kilometers:
@@ -48,7 +49,7 @@ class Settings: ObservableObject {
             self.distanceUnit = .kilometers
         }
     }
-    
+
     func convertDistance(_ meters: Double) -> Double {
         return meters / 1000 * distanceUnit.conversionFactor
     }
@@ -61,7 +62,10 @@ class Settings: ObservableObject {
 
 struct SettingsView: View {
     @ObservedObject var settings: Settings
+    @ObservedObject var pathStorage: PathStorage
     @Environment(\.dismiss) private var dismiss
+    @State private var exportURL: URL? = nil
+    @State private var showingShare = false
 
     var body: some View {
         NavigationView {
@@ -74,6 +78,19 @@ struct SettingsView: View {
                     }
                     .pickerStyle(SegmentedPickerStyle())
                 }
+                Section(header: Text("Export")) {
+                    Button(action: {
+                        if let url = pathStorage.exportJSONToTemporaryFile() {
+                            exportURL = url
+                            showingShare = true
+                        }
+                    }) {
+                        HStack {
+                            Image(systemName: "square.and.arrow.up")
+                            Text("Export JSON")
+                        }
+                    }
+                }
             }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
@@ -85,6 +102,24 @@ struct SettingsView: View {
                 }
             }
         }
+        .sheet(isPresented: $showingShare) {
+            if let url = exportURL {
+                ActivityView(activityItems: [url])
+            } else {
+                EmptyView()
+            }
+        }
+    }
+
+    // Activity view wrapper for sharing the exported file
+    struct ActivityView: UIViewControllerRepresentable {
+        let activityItems: [Any]
+
+        func makeUIViewController(context: Context) -> UIActivityViewController {
+            UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
+        }
+
+        func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
     }
 }
 
@@ -112,4 +147,3 @@ extension Color {
         return Color(red: r, green: g, blue: b)
     }
 }
-

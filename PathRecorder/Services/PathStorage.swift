@@ -47,6 +47,21 @@ final class PathStorage: ObservableObject {
         }
     }
 
+    /// Export the stored paths as a JSON file and return a file URL to the temporary file.
+    /// Returns `nil` if encoding or writing fails.
+    func exportJSONToTemporaryFile() -> URL? {
+        guard let data = try? JSONEncoder().encode(recordedPaths) else { return nil }
+        let tmpDir = FileManager.default.temporaryDirectory
+        let filename = "PathRecorderExport-\(Int(Date().timeIntervalSince1970)).json"
+        let url = tmpDir.appendingPathComponent(filename)
+        do {
+            try data.write(to: url)
+            return url
+        } catch {
+            return nil
+        }
+    }
+
     private func loadPaths() {
         if let data = userDefaults.data(forKey: key),
            let decoded = try? JSONDecoder().decode([RecordedPath].self, from: data) {
