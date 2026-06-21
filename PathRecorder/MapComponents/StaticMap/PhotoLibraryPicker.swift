@@ -49,6 +49,7 @@ struct PhotoLibraryPicker: View {
                 for (image, asset) in zip(images, assets) {
                     let creationDate: Date? = asset?.creationDate
                     if let creationDate = creationDate {
+                        // Find which segment contains this photo's creation date
                         for segment in pathSegments {
                             let segmentLocations = segment.locations
                             guard let first = segmentLocations.first, let last = segmentLocations.last else { continue }

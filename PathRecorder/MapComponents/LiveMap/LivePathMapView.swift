@@ -145,12 +145,13 @@ struct LivePathMapView: View {
             CameraView(isPresented: $showCamera, onImageCaptured: { image in
                 capturedImage = image
                 // Save photo to current path
-                if let location = locationManager.currentLocation {
+                if let locationId = locationManager.recordPhotoLocation() {
                     let filename = "photo_\(UUID().uuidString).jpg"
                     let photo = PathPhoto(
                         timestamp: Date(),
                         image: image,
-                        imageFilename: filename
+                        imageFilename: filename,
+                        locationId: locationId
                     )
                     locationManager.addPhoto(photo)
                 }

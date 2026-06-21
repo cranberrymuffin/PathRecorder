@@ -40,30 +40,12 @@ class Settings: ObservableObject {
         }
     }
 
-    @Published var mapColor: Color {
-        didSet {
-            // Store as hex string
-            UserDefaults.standard.set(mapColor.toHexString(), forKey: "mapColor")
-        }
-    }
-
-    var mapColorUIColor: UIColor {
-        UIColor(mapColor)
-    }
-
     init() {
         if let savedUnit = UserDefaults.standard.string(forKey: "distanceUnit"),
            let unit = DistanceUnit(rawValue: savedUnit) {
             self.distanceUnit = unit
         } else {
             self.distanceUnit = .kilometers
-        }
-
-        if let savedColorHex = UserDefaults.standard.string(forKey: "mapColor"),
-           let color = Color.fromHexString(savedColorHex) {
-            self.mapColor = color
-        } else {
-            self.mapColor = .blue
         }
     }
     
@@ -91,9 +73,6 @@ struct SettingsView: View {
                         }
                     }
                     .pickerStyle(SegmentedPickerStyle())
-                }
-                Section(header: Text("Map Path Color")) {
-                    ColorPicker("Path Color", selection: $settings.mapColor, supportsOpacity: false)
                 }
             }
             .navigationTitle("Settings")

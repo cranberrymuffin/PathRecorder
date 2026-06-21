@@ -28,49 +28,32 @@ struct MapWithPolylines: UIViewRepresentable {
     func updateUIView(_ mapView: MKMapView, context: Context) {
         mapView.removeOverlays(mapView.overlays)
         mapView.removeAnnotations(mapView.annotations)
-        for segment in pathSegments {
+        for (index, segment) in pathSegments.enumerated() {
             if segment.coordinates.count >= 2 {
-                mapView.addOverlay(segment.polyline)
+                let polyline = segment.mkPolyline
+                polyline.title = "segment_\(index)"
+                mapView.addOverlay(polyline)
             }
-            // Only add GPS point annotation if no photo annotation is nearby (within 10 meters)
-            let startCoord = segment.coordinates.first!
-            let endCoord = segment.coordinates.last!
-            let startLocation = CLLocation(latitude: startCoord.latitude, longitude: startCoord.longitude)
-            let endLocation = CLLocation(latitude: endCoord.latitude, longitude: endCoord.longitude)
-            let photoLocations = photos.map { CLLocation(latitude: $0.coordinate.latitude, longitude: $0.coordinate.longitude) }
-            let startHasNearbyPhoto = photoLocations.contains { $0.distance(from: startLocation) <= 10.0 }
-            let endHasNearbyPhoto = photoLocations.contains { $0.distance(from: endLocation) <= 10.0 }
-            if !startHasNearbyPhoto {
+            if let startCoord = segment.coordinates.first,
+               let endCoord = segment.coordinates.last {
                 let startAnnotation = MKPointAnnotation()
                 startAnnotation.coordinate = startCoord
                 mapView.addAnnotation(startAnnotation)
-            }
-            if !endHasNearbyPhoto {
+
                 let endAnnotation = MKPointAnnotation()
                 endAnnotation.coordinate = endCoord
                 mapView.addAnnotation(endAnnotation)
             }
         }
-        // Group photos within 10 meters
-        var clusters: [[PathPhoto]] = []
         for photo in photos {
-            let location = CLLocation(latitude: photo.coordinate.latitude, longitude: photo.coordinate.longitude)
-            if let idx = clusters.firstIndex(where: { cluster in
-                guard let first = cluster.first else { return false }
-                let firstLoc = CLLocation(latitude: first.coordinate.latitude, longitude: first.coordinate.longitude)
-                return location.distance(from: firstLoc) <= 10.0
-            }) {
-                clusters[idx].append(photo)
-            } else {
-                clusters.append([photo])
-            }
+            guard let coord = coordinate(for: photo, in: locations) else { continue }
+            mapView.addAnnotation(PhotoAnnotation(photos: [photo], coordinate: coord))
         }
-        // Add one annotation per cluster
-        for cluster in clusters {
-            guard let first = cluster.first else { continue }
-            let coord = first.coordinate
-            mapView.addAnnotation(PhotoAnnotation(photos: cluster, coordinate: coord))
-        }
+    }
+
+    private func coordinate(for photo: PathPhoto, in locations: [GPSLocation]) -> CLLocationCoordinate2D? {
+        guard let location = locations.first(where: { $0.id == photo.locationId }) else { return nil }
+        return CLLocationCoordinate2D(latitude: location.latitude, longitude: location.longitude)
     }
 
     func makeCoordinator() -> Coordinator {
@@ -96,13 +79,11 @@ struct MapWithPolylines: UIViewRepresentable {
                 } else {
                     annotationView?.annotation = annotation
                 }
-                // Use helper for annotation marker image with preview
                 let preview = photoAnnotation.photos.first?.image
                 annotationView?.image = MapRenderingHelpers.photoAnnotationImage(preview: preview)
                 annotationView?.canShowCallout = false
                 annotationView?.centerOffset = CGPoint(x: 0, y: 0)
                 annotationView?.isUserInteractionEnabled = true
-                // Ensure photo annotation is always on top
                 annotationView?.layer.zPosition = 1
                 return annotationView
             } else {
@@ -115,18 +96,15 @@ struct MapWithPolylines: UIViewRepresentable {
                 }
                 annotationView?.image = MapRenderingHelpers.cachedBlueDotImage()
                 annotationView?.centerOffset = CGPoint(x: 0, y: 0)
-                annotationView?.isUserInteractionEnabled = false // Don't block touches
+                annotationView?.isUserInteractionEnabled = false
                 annotationView?.layer.zPosition = 0
                 return annotationView
             }
         }
         func mapView(_ mapView: MKMapView, didSelect annotationView: MKAnnotationView) {
-            if let photoAnnotation = annotationView.annotation as? PhotoAnnotation {
-                print("Photo annotation tapped at coordinate: \(photoAnnotation.coordinate.latitude), \(photoAnnotation.coordinate.longitude)")
-                // Pass all photos in the cluster to the sheet
-                if let firstPhoto = photoAnnotation.photos.first {
-                    onPhotoTapped(firstPhoto)
-                }
+            if let photoAnnotation = annotationView.annotation as? PhotoAnnotation,
+               let firstPhoto = photoAnnotation.photos.first {
+                onPhotoTapped(firstPhoto)
             }
         }
     }

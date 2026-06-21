@@ -3,12 +3,8 @@ import MapKit
 import SwiftUI
 
 struct MapRenderingHelpers {
-    static func mapUIColor() -> UIColor {
-        if let hex = UserDefaults.standard.string(forKey: "mapColor"),
-        let color = Color.fromHexString(hex) {
-            return UIColor(color)
-        }
-        return UIColor.blue
+    static func defaultStrokeColor() -> UIColor {
+        return .systemBlue
     }
 
     static func photoAnnotationImage(preview: UIImage?) -> UIImage? {
@@ -20,7 +16,7 @@ struct MapRenderingHelpers {
         guard let ctx = UIGraphicsGetCurrentContext() else { return nil }
         // Draw bubble
         let bubblePath = UIBezierPath(roundedRect: bubbleRect, cornerRadius: 12)
-        let annotationColor = mapUIColor()
+        let annotationColor = defaultStrokeColor()
         ctx.setFillColor(annotationColor.cgColor)
         ctx.setShadow(offset: CGSize(width: 0, height: 2), blur: 4, color: UIColor.black.withAlphaComponent(0.15).cgColor)
         bubblePath.fill()
@@ -61,10 +57,28 @@ struct MapRenderingHelpers {
         return image
     }
     static let polylineWidth: CGFloat = 5.0
+    static func segmentColor(for title: String?) -> UIColor {
+        let palette: [UIColor] = [
+            .systemBlue,
+            .systemGreen,
+            .systemOrange,
+            .systemPurple,
+            .systemPink,
+            .systemTeal,
+            .systemYellow
+        ]
+        guard let title = title,
+              title.starts(with: "segment_"),
+              let segmentIndex = Int(title.dropFirst("segment_".count)) else {
+            return defaultStrokeColor()
+        }
+        return palette[segmentIndex % palette.count]
+    }
+
     static func polylineRenderer(for overlay: MKOverlay) -> MKOverlayRenderer {
         if let polyline = overlay as? MKPolyline {
             let renderer = MKPolylineRenderer(polyline: polyline)
-            renderer.strokeColor = mapUIColor()
+            renderer.strokeColor = segmentColor(for: polyline.title)
             renderer.lineWidth = polylineWidth
             renderer.lineCap = .round
             renderer.lineJoin = .round
@@ -78,12 +92,12 @@ struct MapRenderingHelpers {
         UIGraphicsBeginImageContextWithOptions(CGSize(width: size, height: size), false, 0)
         guard let ctx = UIGraphicsGetCurrentContext() else { return nil }
         // Draw glow
-        let glowColor = mapUIColor().withAlphaComponent(0.3).cgColor
+        let glowColor = defaultStrokeColor().withAlphaComponent(0.3).cgColor
         ctx.setFillColor(glowColor)
         ctx.addEllipse(in: CGRect(x: (size-dotRadius*3)/2, y: (size-dotRadius*3)/2, width: dotRadius*3, height: dotRadius*3))
         ctx.fillPath()
         // Draw solid dot
-        let dotColor = mapUIColor().cgColor
+        let dotColor = defaultStrokeColor().cgColor
         ctx.setFillColor(dotColor)
         ctx.addEllipse(in: CGRect(x: (size-dotRadius)/2, y: (size-dotRadius)/2, width: dotRadius, height: dotRadius))
         ctx.fillPath()
@@ -97,7 +111,7 @@ struct MapRenderingHelpers {
         UIGraphicsBeginImageContextWithOptions(CGSize(width: size, height: size), false, 0)
         guard let ctx = UIGraphicsGetCurrentContext() else { return nil }
         // Draw solid dot
-        let dotColor = mapUIColor().cgColor
+        let dotColor = defaultStrokeColor().cgColor
         ctx.setFillColor(dotColor)
         ctx.addEllipse(in: CGRect(x: (size-dotRadius)/2, y: (size-dotRadius)/2, width: dotRadius, height: dotRadius))
         ctx.fillPath()

@@ -27,9 +27,6 @@ struct PhotoPagerView: View {
                                 if let image = photo.image {
                                     Text(DateFormatter.localizedString(from: photo.timestamp, dateStyle: .medium, timeStyle: .short))
                                         .font(.subheadline)
-                                    // Display GPS coordinate in readable format
-                                    Text(String(format: "Lat: %.5f, Lon: %.5f", photo.coordinate.latitude, photo.coordinate.longitude))
-                                        .font(.caption)
                                     Image(uiImage: image)
                                         .resizable()
                                         .scaledToFit()
@@ -134,18 +131,11 @@ struct PhotoPagerView: View {
         // Create image destination
         guard let imageDestination = CGImageDestinationCreateWithURL(fileURL as CFURL, UTType.jpeg.identifier as CFString, 1, nil) else { return false }
         
-        // Create metadata dictionary
+        // Create metadata dictionary with timestamp only
         let metadata: [String: Any] = [
             kCGImagePropertyExifDictionary as String: [
                 kCGImagePropertyExifDateTimeOriginal as String: ISO8601DateFormatter().string(from: photo.timestamp),
                 kCGImagePropertyExifDateTimeDigitized as String: ISO8601DateFormatter().string(from: photo.timestamp)
-            ],
-            kCGImagePropertyGPSDictionary as String: [
-                kCGImagePropertyGPSLatitude as String: abs(photo.coordinate.latitude),
-                kCGImagePropertyGPSLatitudeRef as String: photo.coordinate.latitude >= 0 ? "N" : "S",
-                kCGImagePropertyGPSLongitude as String: abs(photo.coordinate.longitude),
-                kCGImagePropertyGPSLongitudeRef as String: photo.coordinate.longitude >= 0 ? "E" : "W",
-                kCGImagePropertyGPSTimeStamp as String: ISO8601DateFormatter().string(from: photo.timestamp)
             ]
         ]
         

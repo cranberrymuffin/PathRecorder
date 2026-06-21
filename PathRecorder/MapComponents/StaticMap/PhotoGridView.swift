@@ -145,9 +145,8 @@ struct PhotoGridView: View {
                 if let image = photo.uiImage {
                     let assetRequest = PHAssetChangeRequest.creationRequestForAsset(from: image)
                     
-                    // Set original creation date and location
+                    // Set original creation date
                     assetRequest.creationDate = photo.timestamp
-                    assetRequest.location = CLLocation(latitude: photo.coordinate.latitude, longitude: photo.coordinate.longitude)
                     
                     if let assetPlaceholder = assetRequest.placeholderForCreatedAsset {
                         assetPlaceholders.append(assetPlaceholder)

@@ -77,14 +77,19 @@ class LiveMapViewController: UIViewController, MKMapViewDelegate {
             mapView.removeOverlay(polyline)
             overlays.removeValue(forKey: id)
         }
-        for (id, locs) in grouped {
-            let coords = locs.sorted(by: { $0.timestamp < $1.timestamp }).map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) }
-            if let polyline = overlays[id] {
+        let orderedSegments = grouped
+            .map { (id: $0.key, locations: $0.value.sorted(by: { $0.timestamp < $1.timestamp })) }
+            .sorted { $0.locations.first?.timestamp ?? .distantPast < $1.locations.first?.timestamp ?? .distantPast }
+
+        for (index, segment) in orderedSegments.enumerated() {
+            let coords = segment.locations.map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) }
+            if let polyline = overlays[segment.id] {
                 mapView.removeOverlay(polyline)
             }
             if coords.count >= 2 {
                 let polyline = MKPolyline(coordinates: coords, count: coords.count)
-                overlays[id] = polyline
+                polyline.title = "segment_\(index)"
+                overlays[segment.id] = polyline
                 mapView.addOverlay(polyline)
             }
         }
