@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import UIKit
+import Supabase
 
 enum DistanceUnit: String, CaseIterable, Codable {
     case kilometers = "km"
@@ -65,10 +66,10 @@ struct SettingsView: View {
     @ObservedObject var pathStorage: PathStorage
     @EnvironmentObject private var authManager: AuthManager
     @Environment(\.dismiss) private var dismiss
-    @State private var exportURL: URL? = nil
-    @State private var showingShare = false
     // Sign-out
     @State private var isSigningOut = false
+    @State private var isUploadingBackup = false
+    @State private var backupSuccessMessage: String? = nil
     // Inline sign-in OTP flow
     @State private var authPhone = ""
     @State private var authOTP = ""
@@ -88,19 +89,6 @@ struct SettingsView: View {
                     }
                     .pickerStyle(SegmentedPickerStyle())
                 }
-                Section(header: Text("Export")) {
-                    Button(action: {
-                        if let url = pathStorage.exportJSONToTemporaryFile() {
-                            exportURL = url
-                            showingShare = true
-                        }
-                    }) {
-                        HStack {
-                            Image(systemName: "square.and.arrow.up")
-                            Text("Export JSON")
-                        }
-                    }
-                }
                 Section(header: Text("Account")) {
                     if authManager.isAuthenticated {
                         HStack {
@@ -109,6 +97,20 @@ struct SettingsView: View {
                             Text(authManager.displayPhone(for: authManager.currentUser))
                                 .foregroundColor(.secondary)
                         }
+                        Button {
+                            Task { await uploadBackup() }
+                        } label: {
+                            if isUploadingBackup {
+                                HStack { ProgressView(); Text("Backing up...") }
+                            } else {
+                                HStack {
+                                    Image(systemName: "icloud.and.arrow.up")
+                                    Text("Backup to Cloud")
+                                }
+                            }
+                        }
+                        .disabled(isUploadingBackup)
+
                         Button(role: .destructive) {
                             Task { await signOut() }
                         } label: {
@@ -163,12 +165,10 @@ struct SettingsView: View {
                 }
             }
         }
-        .sheet(isPresented: $showingShare) {
-            if let url = exportURL {
-                ActivityView(activityItems: [url])
-            } else {
-                EmptyView()
-            }
+        .alert("Backup Saved", isPresented: .constant(backupSuccessMessage != nil)) {
+            Button("OK") { backupSuccessMessage = nil }
+        } message: {
+            Text(backupSuccessMessage ?? "")
         }
         .alert("Auth Error", isPresented: .constant(authErrorMessage != nil)) {
             Button("OK") {
@@ -176,6 +176,99 @@ struct SettingsView: View {
             }
         } message: {
             Text(authErrorMessage ?? "Unknown error")
+        }
+    }
+
+    private func uploadBackup() async {
+        guard let userId = authManager.currentUser?.id else {
+            authErrorMessage = "Not signed in."
+            return
+        }
+        isUploadingBackup = true
+        defer { isUploadingBackup = false }
+        do {
+            struct PathRow: Encodable {
+                let id: UUID
+                let user_id: UUID
+                let name: String
+                let created_at: Date
+            }
+            struct SegmentRow: Encodable {
+                let id: UUID
+                let path_id: UUID
+            }
+            struct LocationRow: Encodable {
+                let id: UUID
+                let segment_id: UUID
+                let latitude: Double
+                let longitude: Double
+                let timestamp: Date
+            }
+            struct PhotoRow: Encodable {
+                let id: UUID
+                let location_id: UUID
+                let timestamp: Date
+                let storage_path: String
+            }
+
+            var pathRows: [PathRow] = []
+            var segmentRows: [SegmentRow] = []
+            var locationRows: [LocationRow] = []
+            var photoRows: [PhotoRow] = []
+
+            for path in pathStorage.recordedPaths {
+                pathRows.append(PathRow(
+                    id: path.id,
+                    user_id: userId,
+                    name: path.name,
+                    created_at: path.startTime
+                ))
+
+                for segment in path.segments {
+                    segmentRows.append(SegmentRow(id: segment.id, path_id: path.id))
+                    for location in segment.locations {
+                        locationRows.append(LocationRow(
+                            id: location.id,
+                            segment_id: segment.id,
+                            latitude: location.latitude,
+                            longitude: location.longitude,
+                            timestamp: location.timestamp
+                        ))
+                    }
+                }
+
+                for photo in path.photos {
+                    let storagePath = "\(userId.uuidString.lowercased())/\(photo.id.uuidString.lowercased()).jpg"
+                    guard let image = photo.image,
+                          let jpegData = image.jpegData(compressionQuality: 0.9) else { continue }
+                    try await supabase.storage
+                        .from("path-photos")
+                        .upload(storagePath, data: jpegData, options: FileOptions(contentType: "image/jpeg", upsert: true))
+                    photoRows.append(PhotoRow(
+                        id: photo.id,
+                        location_id: photo.locationId,
+                        timestamp: photo.timestamp,
+                        storage_path: storagePath
+                    ))
+                }
+            }
+
+            if !pathRows.isEmpty {
+                try await supabase.from("paths").upsert(pathRows, onConflict: "id").execute()
+            }
+            if !segmentRows.isEmpty {
+                try await supabase.from("path_segments").upsert(segmentRows, onConflict: "id").execute()
+            }
+            if !locationRows.isEmpty {
+                try await supabase.from("gps_locations").upsert(locationRows, onConflict: "id").execute()
+            }
+            if !photoRows.isEmpty {
+                try await supabase.from("path_photos").upsert(photoRows, onConflict: "id").execute()
+            }
+
+            backupSuccessMessage = "Your data has been backed up to the cloud."
+        } catch {
+            authErrorMessage = error.localizedDescription
         }
     }
 
@@ -214,19 +307,11 @@ struct SettingsView: View {
         }
     }
 
-    // Activity view wrapper for sharing the exported file
-    struct ActivityView: UIViewControllerRepresentable {
-        let activityItems: [Any]
 
-        func makeUIViewController(context: Context) -> UIActivityViewController {
-            UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
-        }
-
-        func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
-    }
 }
 
 // MARK: - Color <-> Hex helpers
+
 extension Color {
     func toHexString() -> String {
         let uiColor = UIColor(self)
