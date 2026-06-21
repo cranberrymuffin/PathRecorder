@@ -64,13 +64,13 @@ struct PathMapView: View {
             locations: currentPath.locations,
             pathSegments: currentPath.segments,
             photos: currentPath.photos,
-            onPhotoTapped: { tappedPhoto in
-                handlePhotoTap(tappedPhoto)
+            onPhotoTapped: { tappedPhotos, selectedPhoto in
+                handlePhotoTap(tappedPhotos, selectedPhoto: selectedPhoto)
             }
         )
         .id(currentPath.photos.count)
     }
-
+    
     private func bottomInfoSheet(for currentPath: RecordedPath) -> some View {
         VStack(spacing: 0) {
             Spacer()
@@ -84,7 +84,7 @@ struct PathMapView: View {
                 .padding(.bottom, 20)
         }
     }
-
+    
     private func pathInfoContent(for currentPath: RecordedPath) -> some View {
         VStack(alignment: .center, spacing: 8) {
             // Title line
@@ -92,7 +92,7 @@ struct PathMapView: View {
                 .font(.headline)
                 .padding(.horizontal, 16)
                 .padding(.top, 16)
-
+            
             // Metrics line
             pathMetricsRow(for: currentPath)
                 .padding(.horizontal, 16)
@@ -100,7 +100,7 @@ struct PathMapView: View {
         }
         .frame(maxWidth: nil, alignment: .center)
     }
-
+    
     private func pathMetricsRow(for currentPath: RecordedPath) -> some View {
         HStack(spacing: 12) {
             // Distance
@@ -109,16 +109,16 @@ struct PathMapView: View {
                 color: .green,
                 text: settings.formatDistance(currentPath.totalDistance)
             )
-
-
+            
+            
             // Total time
             metricItem(
                 icon: "clock",
                 color: .orange,
                 text: formatTime(currentPath.totalDuration)
             )
-
-
+            
+            
             // Pace
             metricItem(
                 icon: "timer",
@@ -131,7 +131,7 @@ struct PathMapView: View {
             )
         }
     }
-
+    
     private func metricItem(icon: String, color: Color, text: String) -> some View {
         HStack(spacing: 4) {
             Image(systemName: icon)
@@ -141,12 +141,12 @@ struct PathMapView: View {
                 .font(.subheadline)
         }
     }
-
+    
     // MARK: - Helper Methods
-    private func handlePhotoTap(_ tappedPhoto: PathPhoto) {
-        let latestPath = pathStorage.path(for: recordedPath.id) ?? recordedPath
-        selectedPhotos = latestPath.photos
-        if let idx = selectedPhotos?.firstIndex(where: { $0.id == tappedPhoto.id }) {
+    private func handlePhotoTap(_ tappedPhotos: [PathPhoto], selectedPhoto: PathPhoto) {
+        let sortedPhotos = tappedPhotos.sorted { $0.timestamp < $1.timestamp }
+        selectedPhotos = sortedPhotos
+        if let idx = sortedPhotos.firstIndex(where: { $0.id == selectedPhoto.id }) {
             selectedPhotoIndex = idx
         } else {
             selectedPhotoIndex = 0
@@ -285,7 +285,7 @@ struct PathMapView: View {
             }
         }
     }
-
+    
     // Helper function for formatting time
     private func formatTime(_ timeInterval: TimeInterval) -> String {
         let hours = Int(timeInterval) / 3600
