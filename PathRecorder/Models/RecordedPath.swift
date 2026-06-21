@@ -4,25 +4,60 @@ import CoreLocation
 
 struct RecordedPath: Identifiable, Codable, Hashable {
     let id: UUID
-    let startTime: Date // Keep start time for naming and reference
-    let totalDuration: TimeInterval // Total time in seconds
-    let totalDistance: Double
-    let locations: [GPSLocation]
-    var photos: [PathPhoto]
+    var segments: [PathSegment]
     var name: String
+    var photos: [PathPhoto]
     
-    init(startTime: Date, totalDuration: TimeInterval, totalDistance: Double, locations: [GPSLocation], photos: [PathPhoto] = [], name: String? = nil) {
+    init(segments: [PathSegment], name: String? = nil, photos: [PathPhoto] = []) {
         self.id = UUID()
-        self.startTime = startTime
-        self.totalDuration = totalDuration
-        self.totalDistance = totalDistance
-        self.locations = locations
+        self.segments = segments
         self.photos = photos
         if let name = name {
             self.name = name
         } else {
+            let startTime = segments.first?.startTime ?? Date()
             self.name = "Path \(DateFormatter.localizedString(from: startTime, dateStyle: .short, timeStyle: .short))"
         }
+    }
+    
+    /// Start time of the first segment
+    var startTime: Date {
+        segments.first?.startTime ?? Date()
+    }
+    
+    /// Total duration across all segments
+    var totalDuration: TimeInterval {
+        segments.reduce(0) { $0 + $1.duration }
+    }
+    
+    /// Total distance traveled across all segments
+    var totalDistance: Double {
+        segments.reduce(0) { total, segment in
+            var distance = total
+            for i in 0..<(segment.locations.count - 1) {
+                let loc1 = CLLocationCoordinate2D(latitude: segment.locations[i].latitude, 
+                                                   longitude: segment.locations[i].longitude)
+                let loc2 = CLLocationCoordinate2D(latitude: segment.locations[i + 1].latitude, 
+                                                   longitude: segment.locations[i + 1].longitude)
+                let c1 = CLLocation(latitude: loc1.latitude, longitude: loc1.longitude)
+                let c2 = CLLocation(latitude: loc2.latitude, longitude: loc2.longitude)
+                distance += c1.distance(from: c2)
+            }
+            return distance
+        }
+    }
+    
+    /// All GPS locations from all segments (for backward compatibility with display code)
+    var locations: [GPSLocation] {
+        segments.flatMap { $0.locations }
+    }
+    
+    mutating func editName(_ newName: String) {
+        self.name = newName
+    }
+    
+    mutating func addSegment(_ segment: PathSegment) {
+        segments.append(segment)
     }
 
     static func == (lhs: RecordedPath, rhs: RecordedPath) -> Bool {
@@ -32,11 +67,6 @@ struct RecordedPath: Identifiable, Codable, Hashable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
     }
-
-    mutating func editName(_ newName: String) {
-        self.name = newName
-    }
-    
 }
 
 struct GPSLocation: Identifiable, Codable, Equatable {
@@ -44,9 +74,9 @@ struct GPSLocation: Identifiable, Codable, Equatable {
     let latitude: Double
     let longitude: Double
     let timestamp: Date
-    let segmentId: UUID // Track which recording segment this belongs to
+    let segmentId: UUID  // Tracks which segment this location belongs to
     
-    init(latitude: Double, longitude: Double, timestamp: Date, segmentId: UUID = UUID()) {
+    init(latitude: Double, longitude: Double, timestamp: Date, segmentId: UUID) {
         self.id = UUID()
         self.latitude = latitude
         self.longitude = longitude

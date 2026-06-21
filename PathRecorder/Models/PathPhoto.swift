@@ -11,20 +11,26 @@ import CoreLocation
 // Model for storing photos taken during a path
 struct PathPhoto: Identifiable, Codable, Hashable {
     let id: UUID
-    let coordinate: CLLocationCoordinate2D
     let timestamp: Date
-    let imageFilename: String // Store only filename, not image data
+    let imageFilename: String
+    let locationId: UUID
 
-    init(coordinate: CLLocationCoordinate2D, timestamp: Date, image: UIImage, imageFilename: String) {
+    init(timestamp: Date, image: UIImage, imageFilename: String, locationId: UUID) {
         self.id = UUID()
-        self.coordinate = coordinate
         self.timestamp = timestamp
         self.imageFilename = imageFilename
-        // Save image to disk when creating
+        self.locationId = locationId
         if let data = image.jpegData(compressionQuality: 0.9) {
             let url = PathPhoto.imagesDirectory.appendingPathComponent(imageFilename)
             try? data.write(to: url)
         }
+    }
+
+    init(id: UUID, timestamp: Date, imageFilename: String, locationId: UUID) {
+        self.id = id
+        self.timestamp = timestamp
+        self.imageFilename = imageFilename
+        self.locationId = locationId
     }
 
     var image: UIImage? {
@@ -32,42 +38,18 @@ struct PathPhoto: Identifiable, Codable, Hashable {
         return UIImage(contentsOfFile: url.path)
     }
 
-    enum CodingKeys: String, CodingKey {
-        case id, latitude, longitude, timestamp, imageFilename
-    }
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        id = try container.decode(UUID.self, forKey: .id)
-        let latitude = try container.decode(Double.self, forKey: .latitude)
-        let longitude = try container.decode(Double.self, forKey: .longitude)
-        coordinate = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
-        timestamp = try container.decode(Date.self, forKey: .timestamp)
-        imageFilename = try container.decode(String.self, forKey: .imageFilename)
-    }
-
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(id, forKey: .id)
-        try container.encode(coordinate.latitude, forKey: .latitude)
-        try container.encode(coordinate.longitude, forKey: .longitude)
-        try container.encode(timestamp, forKey: .timestamp)
-        try container.encode(imageFilename, forKey: .imageFilename)
-    }
     static func == (lhs: PathPhoto, rhs: PathPhoto) -> Bool {
         return lhs.id == rhs.id &&
-            lhs.coordinate.latitude == rhs.coordinate.latitude &&
-            lhs.coordinate.longitude == rhs.coordinate.longitude &&
             lhs.timestamp == rhs.timestamp &&
-            lhs.imageFilename == rhs.imageFilename
+            lhs.imageFilename == rhs.imageFilename &&
+            lhs.locationId == rhs.locationId
     }
 
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
-        hasher.combine(coordinate.latitude)
-        hasher.combine(coordinate.longitude)
         hasher.combine(timestamp)
         hasher.combine(imageFilename)
+        hasher.combine(locationId)
     }
 
     // Directory for storing images
