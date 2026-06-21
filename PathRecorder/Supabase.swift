@@ -18,6 +18,9 @@ let supabase = SupabaseClient(
 final class AuthManager: ObservableObject {
   @Published var currentUser: User?
   @Published var isLoadingSession = true
+  @Published var isUploadingBackup = false
+  @Published var backupProgress: Double = 0.0
+  @Published var backupStartTime: Date? = nil
 
   private var authListenerTask: Task<Void, Never>?
 

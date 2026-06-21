@@ -92,7 +92,6 @@ class DataMigration {
             for i in paths.indices {
                 let allLocations = paths[i].segments.flatMap { $0.locations }
                 paths[i].photos = paths[i].photos.compactMap { photo in
-                    // Keep locationId only if it still references a real location
                     let validId = photo.locationId.flatMap { lid in
                         allLocations.contains(where: { $0.id == lid }) ? lid : nil
                     }

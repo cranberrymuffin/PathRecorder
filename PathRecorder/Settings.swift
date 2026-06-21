@@ -68,7 +68,6 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     // Sign-out
     @State private var isSigningOut = false
-    @State private var isUploadingBackup = false
     @State private var backupSuccessMessage: String? = nil
     // Inline sign-in OTP flow
     @State private var authPhone = ""
@@ -100,8 +99,20 @@ struct SettingsView: View {
                         Button {
                             Task { await uploadBackup() }
                         } label: {
-                            if isUploadingBackup {
-                                HStack { ProgressView(); Text("Backing up...") }
+                            if authManager.isUploadingBackup {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    HStack {
+                                        Text("Backing up... \(Int(authManager.backupProgress * 100))%")
+                                            .font(.subheadline)
+                                        Spacer()
+                                        if let remaining = estimatedTimeRemaining {
+                                            Text(remaining)
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                        }
+                                    }
+                                    ProgressView(value: authManager.backupProgress)
+                                }
                             } else {
                                 HStack {
                                     Image(systemName: "icloud.and.arrow.up")
@@ -109,7 +120,7 @@ struct SettingsView: View {
                                 }
                             }
                         }
-                        .disabled(isUploadingBackup)
+                        .disabled(authManager.isUploadingBackup)
 
                         Button(role: .destructive) {
                             Task { await signOut() }
@@ -120,7 +131,7 @@ struct SettingsView: View {
                                 Text("Sign Out")
                             }
                         }
-                        .disabled(isSigningOut)
+                        .disabled(isSigningOut || authManager.isUploadingBackup)
                     } else {
                         TextField("+15551234567", text: $authPhone)
                             .keyboardType(.phonePad)
@@ -179,13 +190,29 @@ struct SettingsView: View {
         }
     }
 
+    private var estimatedTimeRemaining: String? {
+        guard let start = authManager.backupStartTime,
+              authManager.backupProgress > 0.05 else { return nil }
+        let elapsed = Date().timeIntervalSince(start)
+        let total = elapsed / authManager.backupProgress
+        let remaining = total - elapsed
+        guard remaining > 1 else { return nil }
+        return "~\(Int(remaining.rounded()))s remaining"
+    }
+
     private func uploadBackup() async {
         guard let userId = authManager.currentUser?.id else {
             authErrorMessage = "Not signed in."
             return
         }
-        isUploadingBackup = true
-        defer { isUploadingBackup = false }
+        authManager.isUploadingBackup = true
+        authManager.backupProgress = 0.0
+        authManager.backupStartTime = Date()
+        defer {
+            authManager.isUploadingBackup = false
+            authManager.backupProgress = 0.0
+            authManager.backupStartTime = nil
+        }
         do {
             struct PathRow: Encodable {
                 let id: UUID
@@ -206,6 +233,7 @@ struct SettingsView: View {
             }
             struct PhotoRow: Encodable {
                 let id: UUID
+                let user_id: UUID
                 let location_id: UUID
                 let timestamp: Date
                 let storage_path: String
@@ -216,6 +244,8 @@ struct SettingsView: View {
             var locationRows: [LocationRow] = []
             var photoRows: [PhotoRow] = []
 
+            let totalPhotos = pathStorage.recordedPaths.reduce(0) { $0 + $1.photos.count }
+            var uploadedPhotos = 0
             for path in pathStorage.recordedPaths {
                 pathRows.append(PathRow(
                     id: path.id,
@@ -244,8 +274,13 @@ struct SettingsView: View {
                     try await supabase.storage
                         .from("path-photos")
                         .upload(storagePath, data: jpegData, options: FileOptions(contentType: "image/jpeg", upsert: true))
+                    uploadedPhotos += 1
+                    if totalPhotos > 0 {
+                        authManager.backupProgress = Double(uploadedPhotos) / Double(totalPhotos)
+                    }
                     photoRows.append(PhotoRow(
                         id: photo.id,
+                        user_id: userId,
                         location_id: photo.locationId,
                         timestamp: photo.timestamp,
                         storage_path: storagePath
