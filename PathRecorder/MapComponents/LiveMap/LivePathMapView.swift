@@ -148,7 +148,6 @@ struct LivePathMapView: View {
                 if let location = locationManager.currentLocation {
                     let filename = "photo_\(UUID().uuidString).jpg"
                     let photo = PathPhoto(
-                        coordinate: location.coordinate,
                         timestamp: Date(),
                         image: image,
                         imageFilename: filename

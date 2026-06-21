@@ -9,7 +9,22 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     @Published var capturedPhotos: [PathPhoto] = []
     func addPhoto(_ photo: PathPhoto) {
         capturedPhotos.append(photo)
-        saveRecordingState() // Persist photos immediately after adding
+        saveRecordingState()
+    }
+
+    /// Snapshots the current GPS position into the recorded path and returns its id.
+    /// Call this at the moment a photo is captured so the photo has a precise location pin.
+    func recordPhotoLocation() -> UUID? {
+        guard let current = currentLocation else { return nil }
+        let gpsLocation = GPSLocation(
+            latitude: current.coordinate.latitude,
+            longitude: current.coordinate.longitude,
+            timestamp: current.timestamp,
+            segmentId: currentSegmentId
+        )
+        locations.append(gpsLocation)
+        saveRecordingState()
+        return gpsLocation.id
     }
     private let locationManager = CLLocationManager()
     @Published var locations: [GPSLocation] = []
@@ -184,10 +199,11 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
             self.lastProcessedTime = nil
             self.lastProcessedLocation = nil
             self.recentLocations.removeAll()
-            // Start a new segment when resuming
+            // Start a new segment when resuming; assign the segment ID before location updates begin
             self.currentSegmentId = UUID()
             self.locationManager.startUpdatingLocation()
-            self.markSegment() // Ensure segment starts with a coordinate
+            // Do not duplicate the last paused location in the new segment.
+            // Subsequent location updates will belong to this new segment.
             // Recreate the timer when resuming
             self.startActivityTimer()
             // Update Live Activity to show resumed state
@@ -418,8 +434,8 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
             return
         }
 
-        // Load the existing data
-        self.locations = path.locations
+        // Flatten segments back to locations for editing
+        self.locations = path.segments.flatMap { $0.locations }
         self.totalDistance = path.totalDistance
         self.elapsedTime = path.totalDuration
         self.startTime = path.startTime
@@ -429,7 +445,10 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         self.isRecording = true
         self.isPaused = true // Start in paused state as requested
         self.editingPathId = path.id
+        
+        // Restore all photos associated with the selected path
         self.capturedPhotos = path.photos
+        
         // Clear current location to prevent showing stale location annotation
         self.currentLocation = nil
         // Set up for continuing the path
@@ -452,15 +471,19 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
             pathStorage.deletePath(id: editingPathId!)
         }
 
-        // Create new path
-        let recordedPath = RecordedPath(
-            startTime: startTime,
-            totalDuration: elapsedTime,
-            totalDistance: totalDistance,
-            locations: locations,
-            photos: capturedPhotos,
-            name: editingPathName
-        )
+        // Group locations by segmentId to create PathSegments
+        let groupedBySegment = Dictionary(grouping: locations) { $0.segmentId }
+        let segments = groupedBySegment
+            .sorted { segments1, segments2 in
+                (segments1.value.first?.timestamp ?? Date()) < (segments2.value.first?.timestamp ?? Date())
+            }
+            .map { _, groupedLocations in
+                let sortedLocations = groupedLocations.sorted { $0.timestamp < $1.timestamp }
+                return PathSegment(locations: sortedLocations)
+            }
+
+        // Create new path with segments and preserve captured photos
+        let recordedPath = RecordedPath(segments: segments, name: editingPathName, photos: capturedPhotos)
         pathStorage.savePath(recordedPath)
         capturedPhotos.removeAll()
 

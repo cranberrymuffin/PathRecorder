@@ -171,6 +171,13 @@ struct CameraView: View {
         .onDisappear {
             cameraService.stop()
         }
+        .alert("Camera Error", isPresented: Binding(get: { cameraService.captureError != nil }, set: { if !$0 { cameraService.captureError = nil }})) {
+            Button("OK", role: .cancel) {
+                cameraService.captureError = nil
+            }
+        } message: {
+            Text(cameraService.captureError ?? "An unknown camera error occurred.")
+        }
     }
 
     // Helper for flash icon
@@ -301,6 +308,7 @@ class CameraService: NSObject, ObservableObject {
     @Published var currentCameraPosition: AVCaptureDevice.Position = .back
     @Published var flashMode: FlashMode = .auto
     @Published var isSessionConfigured = false
+    @Published var captureError: String? = nil
 
     @Published var zoomFactor: CGFloat = 1.0 {
         didSet {
@@ -443,11 +451,15 @@ class CameraService: NSObject, ObservableObject {
             settings.flashMode = flashMode.avFlashMode
         }
         
-        // Set the orientation for the photo
-        if let connection = output.connection(with: .video) {
-            connection.videoOrientation = currentVideoOrientation()
+        guard let connection = output.connection(with: .video), connection.isActive, connection.isEnabled else {
+            print("[CameraService] Cannot capture photo: no active video connection.")
+            DispatchQueue.main.async {
+                self.captureError = "Camera is unavailable. Please try again when the camera is ready."
+            }
+            return
         }
-        
+
+        connection.videoOrientation = currentVideoOrientation()
         output.capturePhoto(with: settings, delegate: self)
     }
     

@@ -50,23 +50,23 @@ struct PhotoLibraryPicker: View {
                     let creationDate: Date? = asset?.creationDate
                     if let creationDate = creationDate {
                         for segment in pathSegments {
-                            let segmentLocations = recordedPath.locations.filter { $0.segmentId == segment.id }
+                            let segmentLocations = segment.locations
                             guard let first = segmentLocations.first, let last = segmentLocations.last else { continue }
                             if creationDate >= first.timestamp && creationDate <= last.timestamp {
-                                let closest = segmentLocations.min(by: { abs($0.timestamp.timeIntervalSince(creationDate)) < abs($1.timestamp.timeIntervalSince(creationDate)) })
-                                if let closestLocation = closest {
-                                    var filename = "photo_\(UUID().uuidString).jpg"
-                                    if let asset = asset, let resource = PHAssetResource.assetResources(for: asset).first {
-                                        filename = resource.originalFilename
-                                    }
-                                    let pathPhoto = PathPhoto(
-                                        coordinate: CLLocationCoordinate2D(latitude: closestLocation.latitude, longitude: closestLocation.longitude),
-                                        timestamp: creationDate,
-                                        image: image,
-                                        imageFilename: filename
-                                    )
-                                    pending.append(pathPhoto)
+                                var filename = "photo_\(UUID().uuidString).jpg"
+                                if let asset = asset, let resource = PHAssetResource.assetResources(for: asset).first {
+                                    filename = resource.originalFilename
                                 }
+                                guard let closestLocation = segmentLocations.min(by: {
+                                    abs($0.timestamp.timeIntervalSince(creationDate)) < abs($1.timestamp.timeIntervalSince(creationDate))
+                                }) else { continue }
+                                let pathPhoto = PathPhoto(
+                                    timestamp: creationDate,
+                                    image: image,
+                                    imageFilename: filename,
+                                    locationId: closestLocation.id
+                                )
+                                pending.append(pathPhoto)
                                 break
                             }
                         }
