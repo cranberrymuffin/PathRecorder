@@ -85,4 +85,7 @@ fastlane/test_output
 
 iOSInjectionProject/
 
+# Ignore local test fixtures
+PathRecorderTests/fixture.json
+
 # End of https://www.toptal.com/developers/gitignore/api/swift
