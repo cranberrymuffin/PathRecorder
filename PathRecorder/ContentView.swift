@@ -26,6 +26,7 @@ struct ContentView: View {
             return sortAscending ? "Fastest first" : "Slowest first"
         }
     }
+    @EnvironmentObject private var authManager: AuthManager
     @StateObject private var locationManager = LocationManager()
     @StateObject private var pathStorage = PathStorage()
     @StateObject private var settings = Settings()
@@ -88,7 +89,9 @@ struct ContentView: View {
                                 locationManager.loadPathForEditing(path, pathStorage: pathStorage)
                             },
                             onDelete: {
+                                let photoIds = path.photos.map { $0.id }
                                 pathStorage.deletePath(id: path.id)
+                                Task { await authManager.deleteFromCloud(pathId: path.id, photoIds: photoIds) }
                             },
                             formatTime: formatTime,
                             onSelect: {
@@ -145,6 +148,23 @@ struct ContentView: View {
                     }
                     UserDefaults.standard.set(true, forKey: rateAlertKey)
                 }
+            }
+            .onChange(of: authManager.currentUser?.id) { _, userId in
+                if userId != nil {
+                    Task { await authManager.syncOnLogin(pathStorage: pathStorage) }
+                } else {
+                    authManager.unsyncedPathIds = []
+                    authManager.dirtyPathIds = []
+                }
+            }
+            .onChange(of: pathStorage.recordedPaths.count) { _, _ in
+                guard authManager.currentUser != nil else { return }
+                Task { await authManager.refreshSyncStatus(localPaths: pathStorage.recordedPaths) }
+            }
+            .onChange(of: locationManager.lastEditedPathId) { _, editedId in
+                guard let id = editedId, authManager.currentUser != nil else { return }
+                authManager.dirtyPathIds.insert(id)
+                locationManager.lastEditedPathId = nil
             }
             .onReceive(locationManager.$pathToNavigateTo) { path in
                 if let path = path {

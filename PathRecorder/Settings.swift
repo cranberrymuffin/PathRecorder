@@ -96,31 +96,33 @@ struct SettingsView: View {
                             Text(authManager.displayPhone(for: authManager.currentUser))
                                 .foregroundColor(.secondary)
                         }
-                        Button {
-                            Task { await uploadBackup() }
-                        } label: {
-                            if authManager.isUploadingBackup {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    HStack {
-                                        Text("Backing up... \(Int(authManager.backupProgress * 100))%")
-                                            .font(.subheadline)
-                                        Spacer()
-                                        if let remaining = estimatedTimeRemaining {
-                                            Text(remaining)
-                                                .font(.caption)
-                                                .foregroundColor(.secondary)
+                        if authManager.isUploadingBackup || authManager.hasUnsyncedPaths {
+                            Button {
+                                Task { await uploadBackup() }
+                            } label: {
+                                if authManager.isUploadingBackup {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        HStack {
+                                            Text("Backing up... \(Int(authManager.backupProgress * 100))%")
+                                                .font(.subheadline)
+                                            Spacer()
+                                            if let remaining = estimatedTimeRemaining {
+                                                Text(remaining)
+                                                    .font(.caption)
+                                                    .foregroundColor(.secondary)
+                                            }
                                         }
+                                        ProgressView(value: authManager.backupProgress)
                                     }
-                                    ProgressView(value: authManager.backupProgress)
-                                }
-                            } else {
-                                HStack {
-                                    Image(systemName: "icloud.and.arrow.up")
-                                    Text("Backup to Cloud")
+                                } else {
+                                    HStack {
+                                        Image(systemName: "icloud.and.arrow.up")
+                                        Text("Backup to Cloud")
+                                    }
                                 }
                             }
+                            .disabled(authManager.isUploadingBackup)
                         }
-                        .disabled(authManager.isUploadingBackup)
 
                         Button(role: .destructive) {
                             Task { await signOut() }
@@ -244,9 +246,13 @@ struct SettingsView: View {
             var locationRows: [LocationRow] = []
             var photoRows: [PhotoRow] = []
 
-            let totalPhotos = pathStorage.recordedPaths.reduce(0) { $0 + $1.photos.count }
+            let pathsToUpload = authManager.unsyncedPathIds.union(authManager.dirtyPathIds)
+            let pathsToBackup = pathStorage.recordedPaths.filter { pathsToUpload.contains($0.id) }
+            let totalPhotos = pathsToBackup.reduce(0) { $0 + $1.photos.count }
             var uploadedPhotos = 0
-            for path in pathStorage.recordedPaths {
+            print("[Backup] \(pathsToBackup.count) unsynced paths, \(totalPhotos) photos total")
+            for path in pathsToBackup {
+                print("[Backup] path '\(path.name)' — segments: \(path.segments.count), photos: \(path.photos.count)")
                 pathRows.append(PathRow(
                     id: path.id,
                     user_id: userId,
@@ -270,7 +276,11 @@ struct SettingsView: View {
                 for photo in path.photos {
                     let storagePath = "\(userId.uuidString.lowercased())/\(photo.id.uuidString.lowercased()).jpg"
                     guard let image = photo.image,
-                          let jpegData = image.jpegData(compressionQuality: 0.9) else { continue }
+                          let jpegData = image.jpegData(compressionQuality: 0.9) else {
+                        print("[Backup]   ⚠️ skipping photo \(photo.id) — image missing from disk")
+                        continue
+                    }
+                    print("[Backup]   uploading \(storagePath) (\(jpegData.count) bytes)")
                     try await supabase.storage
                         .from("path-photos")
                         .upload(storagePath, data: jpegData, options: FileOptions(contentType: "image/jpeg", upsert: true))
@@ -278,6 +288,7 @@ struct SettingsView: View {
                     if totalPhotos > 0 {
                         authManager.backupProgress = Double(uploadedPhotos) / Double(totalPhotos)
                     }
+                    print("[Backup]   ✓ uploaded (\(uploadedPhotos)/\(totalPhotos))")
                     photoRows.append(PhotoRow(
                         id: photo.id,
                         user_id: userId,
@@ -288,21 +299,29 @@ struct SettingsView: View {
                 }
             }
 
+            print("[Backup] upserting \(pathRows.count) paths, \(segmentRows.count) segments, \(locationRows.count) locations, \(photoRows.count) photos")
             if !pathRows.isEmpty {
                 try await supabase.from("paths").upsert(pathRows, onConflict: "id").execute()
+                print("[Backup] ✓ paths")
             }
             if !segmentRows.isEmpty {
                 try await supabase.from("path_segments").upsert(segmentRows, onConflict: "id").execute()
+                print("[Backup] ✓ segments")
             }
             if !locationRows.isEmpty {
                 try await supabase.from("gps_locations").upsert(locationRows, onConflict: "id").execute()
+                print("[Backup] ✓ locations")
             }
             if !photoRows.isEmpty {
                 try await supabase.from("path_photos").upsert(photoRows, onConflict: "id").execute()
+                print("[Backup] ✓ photos")
             }
 
+            authManager.dirtyPathIds.subtract(pathsToUpload)
             backupSuccessMessage = "Your data has been backed up to the cloud."
+            await authManager.refreshSyncStatus(localPaths: pathStorage.recordedPaths)
         } catch {
+            print("[Backup] ❌ \(error)")
             authErrorMessage = error.localizedDescription
         }
     }

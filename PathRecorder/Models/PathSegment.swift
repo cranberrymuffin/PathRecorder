@@ -10,6 +10,11 @@ struct PathSegment: Identifiable, Codable {
         self.id = UUID()
         self.locations = locations
     }
+
+    init(id: UUID, locations: [GPSLocation]) {
+        self.id = id
+        self.locations = locations
+    }
     
     var startTime: Date {
         locations.first?.timestamp ?? Date()

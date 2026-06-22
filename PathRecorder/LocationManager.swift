@@ -38,6 +38,7 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     @Published var editingPathId: UUID? = nil
     @Published var editingPathName: String? = nil
     @Published var pathToNavigateTo: RecordedPath? = nil // Track path to navigate to after recording
+    @Published var lastEditedPathId: UUID? = nil
     
     // Properties for improved distance calculation
     private var lastProcessedTime: Date?
@@ -466,11 +467,6 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     func saveCurrentPath(to pathStorage: PathStorage) {
         guard let startTime = startTime else { return }
 
-        if (editingPathId != nil) {
-            // If editing, delete the old path immediately after loading for editing
-            pathStorage.deletePath(id: editingPathId!)
-        }
-
         // Group locations by segmentId to create PathSegments
         let groupedBySegment = Dictionary(grouping: locations) { $0.segmentId }
         let segments = groupedBySegment
@@ -482,8 +478,15 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
                 return PathSegment(locations: sortedLocations)
             }
 
-        // Create new path with segments and preserve captured photos
-        let recordedPath = RecordedPath(segments: segments, name: editingPathName, photos: capturedPhotos)
+        let recordedPath: RecordedPath
+        if let editId = editingPathId {
+            // Preserve the original ID so the server record is updated in place via upsert
+            recordedPath = RecordedPath(id: editId, segments: segments,
+                                        name: editingPathName ?? "Unnamed", photos: capturedPhotos)
+            lastEditedPathId = editId
+        } else {
+            recordedPath = RecordedPath(segments: segments, name: editingPathName, photos: capturedPhotos)
+        }
         pathStorage.savePath(recordedPath)
         capturedPhotos.removeAll()
 

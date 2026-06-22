@@ -15,7 +15,11 @@ final class PathStorage: ObservableObject {
     }
 
     func savePath(_ path: RecordedPath) {
-        recordedPaths.append(path)
+        if let index = recordedPaths.firstIndex(where: { $0.id == path.id }) {
+            recordedPaths[index] = path
+        } else {
+            recordedPaths.append(path)
+        }
         saveToUserDefaults()
     }
 

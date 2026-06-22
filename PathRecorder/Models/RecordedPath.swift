@@ -19,6 +19,13 @@ struct RecordedPath: Identifiable, Codable, Hashable {
             self.name = "Path \(DateFormatter.localizedString(from: startTime, dateStyle: .short, timeStyle: .short))"
         }
     }
+
+    init(id: UUID, segments: [PathSegment], name: String, photos: [PathPhoto] = []) {
+        self.id = id
+        self.segments = segments
+        self.name = name
+        self.photos = photos
+    }
     
     /// Start time of the first segment
     var startTime: Date {
@@ -78,6 +85,14 @@ struct GPSLocation: Identifiable, Codable, Equatable {
     
     init(latitude: Double, longitude: Double, timestamp: Date, segmentId: UUID) {
         self.id = UUID()
+        self.latitude = latitude
+        self.longitude = longitude
+        self.timestamp = timestamp
+        self.segmentId = segmentId
+    }
+
+    init(id: UUID, latitude: Double, longitude: Double, timestamp: Date, segmentId: UUID) {
+        self.id = id
         self.latitude = latitude
         self.longitude = longitude
         self.timestamp = timestamp
