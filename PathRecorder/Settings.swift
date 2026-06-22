@@ -96,6 +96,16 @@ struct SettingsView: View {
                             Text(authManager.displayPhone(for: authManager.currentUser))
                                 .foregroundColor(.secondary)
                         }
+                        if authManager.isRestoringFromCloud {
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack {
+                                    Text("Restoring from cloud... \(Int(authManager.restoreProgress * 100))%")
+                                        .font(.subheadline)
+                                    Spacer()
+                                }
+                                ProgressView(value: authManager.restoreProgress)
+                            }
+                        }
                         if authManager.isUploadingBackup || authManager.hasUnsyncedPaths {
                             Button {
                                 Task { await uploadBackup() }
