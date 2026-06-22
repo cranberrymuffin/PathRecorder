@@ -41,6 +41,7 @@ struct RecordedPath: Identifiable, Codable, Hashable {
     var totalDistance: Double {
         segments.reduce(0) { total, segment in
             var distance = total
+            guard segment.locations.count > 1 else { return distance }
             for i in 0..<(segment.locations.count - 1) {
                 let loc1 = CLLocationCoordinate2D(latitude: segment.locations[i].latitude, 
                                                    longitude: segment.locations[i].longitude)
